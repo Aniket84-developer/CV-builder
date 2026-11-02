@@ -92,8 +92,7 @@ $('analyzeBtn').addEventListener('click', async function() {
   $('analyzeBtn').disabled = true;
 
   try {
-    // Using a model that is confirmed available in your account
-    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + key;
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=' + key;
 
     var response = await fetch(url, {
       method: 'POST',
@@ -231,7 +230,7 @@ $('generateBtn').addEventListener('click', async function() {
     .join('\n') || 'No formal experience listed.';
 
   try {
-    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + key;
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=' + key;
 
     var response = await fetch(url, {
       method: 'POST',
