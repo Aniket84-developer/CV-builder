@@ -26,15 +26,24 @@ function getApiKey() {
   return localStorage.getItem('openai_api_key') || '';
 }
 
+// Convert dataURL to pure base64 (Gemini needs pure base64 without the data: prefix)
+function getPureBase64(dataUrl) {
+  return dataUrl.split(',')[1];
+}
+
+function getMimeType(dataUrl) {
+  return dataUrl.split(';')[0].split(':')[1];
+}
+
 // ========== API Key ==========
 $('saveKeyBtn').addEventListener('click', function() {
   var key = $('apiKey').value.trim();
   if (!key) {
-    setStatus($('keyStatus'), 'Please enter your DeepSeek API key', 'error');
+    setStatus($('keyStatus'), 'Please enter your Google Gemini API key', 'error');
     return;
   }
   localStorage.setItem('openai_api_key', key);
-  setStatus($('keyStatus'), 'DeepSeek API key saved in this browser.', 'success');
+  setStatus($('keyStatus'), 'Gemini API key saved in this browser.', 'success');
   $('apiKey').value = '';
 });
 
@@ -68,11 +77,11 @@ function checkAnalyzeReady() {
   $('analyzeBtn').disabled = !(passportBase64 && nagriktaBase64);
 }
 
-// ========== AI Analyze Photos ==========
+// ========== AI Analyze Photos (Gemini) ==========
 $('analyzeBtn').addEventListener('click', async function() {
   var key = getApiKey();
   if (!key) {
-    setStatus($('analyzeStatus'), 'Please save your DeepSeek API key first.', 'error');
+    setStatus($('analyzeStatus'), 'Please save your Gemini API key first.', 'error');
     return;
   }
   if (!passportBase64 || !nagriktaBase64) {
@@ -80,43 +89,41 @@ $('analyzeBtn').addEventListener('click', async function() {
     return;
   }
 
-  setStatus($('analyzeStatus'), 'Analyzing photos with DeepSeek... this may take 10-20 seconds.', 'loading');
+  setStatus($('analyzeStatus'), 'Analyzing photos with Gemini... this may take 10-20 seconds.', 'loading');
   $('analyzeBtn').disabled = true;
 
   try {
-    var response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key;
+
+    var response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + key
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert at reading Nepali citizenship (Nagrikta) cards and passports. Extract all personal information accurately. Return ONLY a valid JSON object with these exact keys: {"fullName":"","dob":"","parentName":"","address":"","religion":"Hindu","sex":"Male","maritalStatus":"Married","languages":"Hindi, English & Nepali","height":"","weight":"","phone":"","passportNo":"","passportIssue":"","passportExpiry":"","education":"SLC Passed"}. Use DD-MMM-YYYY format for dates when possible. If a field is not visible, leave it as empty string.'
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: 'Extract all personal details from these two images (Passport + Nepali Citizenship / Nagrikta). Return only the JSON.'
-              },
-              {
-                type: 'image_url',
-                image_url: { url: passportBase64 }
-              },
-              {
-                type: 'image_url',
-                image_url: { url: nagriktaBase64 }
+        contents: [{
+          parts: [
+            {
+              text: 'You are an expert at reading Nepali citizenship (Nagrikta) cards and passports. Extract all personal information accurately. Return ONLY a valid JSON object with these exact keys (no extra text, no markdown): {"fullName":"","dob":"","parentName":"","address":"","religion":"Hindu","sex":"Male","maritalStatus":"Married","languages":"Hindi, English & Nepali","height":"","weight":"","phone":"","passportNo":"","passportIssue":"","passportExpiry":"","education":"SLC Passed"}. Use DD-MMM-YYYY format for dates when possible. If a field is not visible, leave it as empty string.'
+            },
+            {
+              inline_data: {
+                mime_type: getMimeType(passportBase64),
+                data: getPureBase64(passportBase64)
               }
-            ]
-          }
-        ],
-        max_tokens: 1000,
-        temperature: 0.1
+            },
+            {
+              inline_data: {
+                mime_type: getMimeType(nagriktaBase64),
+                data: getPureBase64(nagriktaBase64)
+              }
+            }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 1000
+        }
       })
     });
 
@@ -126,7 +133,9 @@ $('analyzeBtn').addEventListener('click', async function() {
     }
 
     var data = await response.json();
-    var content = data.choices[0].message.content.trim();
+    var content = data.candidates[0].content.parts[0].text.trim();
+
+    // Clean possible markdown
     content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
     var extracted = JSON.parse(content);
@@ -151,7 +160,7 @@ $('analyzeBtn').addEventListener('click', async function() {
     setStatus($('analyzeStatus'), 'Details extracted successfully! You can edit any field below.', 'success');
   } catch (err) {
     console.error(err);
-    setStatus($('analyzeStatus'), 'Error: ' + err.message + ' (DeepSeek may have limited image support. You can fill details manually.)', 'error');
+    setStatus($('analyzeStatus'), 'Error: ' + err.message, 'error');
   } finally {
     $('analyzeBtn').disabled = false;
   }
@@ -201,11 +210,11 @@ $('addExpBtn').addEventListener('click', function() {
 experiences.push({ company: '', work: '', years: '', country: '' });
 renderExperiences();
 
-// ========== Generate CV ==========
+// ========== Generate CV (Gemini) ==========
 $('generateBtn').addEventListener('click', async function() {
   var key = getApiKey();
   if (!key) {
-    setStatus($('generateStatus'), 'Please save your DeepSeek API key first.', 'error');
+    setStatus($('generateStatus'), 'Please save your Gemini API key first.', 'error');
     return;
   }
 
@@ -215,7 +224,7 @@ $('generateBtn').addEventListener('click', async function() {
     return;
   }
 
-  setStatus($('generateStatus'), 'Generating polished Bio-Data with DeepSeek...', 'loading');
+  setStatus($('generateStatus'), 'Generating polished Bio-Data with Gemini...', 'loading');
   $('generateBtn').disabled = true;
 
   var expText = experiences
@@ -226,26 +235,23 @@ $('generateBtn').addEventListener('click', async function() {
     .join('\n') || 'No formal experience listed.';
 
   try {
-    var response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key;
+
+    var response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + key
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a professional CV writer specializing in Nepali bio-data format. Given personal details and work experience, produce a clean, formal Bio-Data. Return ONLY a valid JSON object with these keys (no extra text): {"objective":"polished 1-2 sentence career objective","educationList":["item1","item2"],"experienceList":["Worked as a Warehouse Supervisor at ABC Co. in Kuwait for 3 Years"],"declaration":"I hereby declare that the above furnished information are true and correct to the best of my knowledge and belief."}. Make the experience lines natural and professional.'
-          },
-          {
-            role: 'user',
-            content: 'Personal details:\nName: ' + name + '\nDOB: ' + $('dob').value + '\nAddress: ' + $('address').value + '\nEducation raw: ' + $('education').value + '\nObjective draft: ' + $('objective').value + '\n\nWork experiences:\n' + expText + '\n\nReturn the polished JSON.'
-          }
-        ],
-        max_tokens: 800,
-        temperature: 0.3
+        contents: [{
+          parts: [{
+            text: 'You are a professional CV writer specializing in Nepali bio-data format. Given personal details and work experience, produce a clean, formal Bio-Data. Return ONLY a valid JSON object with these keys (no extra text, no markdown): {"objective":"polished 1-2 sentence career objective","educationList":["item1","item2"],"experienceList":["Worked as a Warehouse Supervisor at ABC Co. in Kuwait for 3 Years"],"declaration":"I hereby declare that the above furnished information are true and correct to the best of my knowledge and belief."}. Make the experience lines natural and professional.\n\nPersonal details:\nName: ' + name + '\nDOB: ' + $('dob').value + '\nAddress: ' + $('address').value + '\nEducation raw: ' + $('education').value + '\nObjective draft: ' + $('objective').value + '\n\nWork experiences:\n' + expText
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 800
+        }
       })
     });
 
@@ -255,7 +261,7 @@ $('generateBtn').addEventListener('click', async function() {
     }
 
     var data = await response.json();
-    var content = data.choices[0].message.content.trim();
+    var content = data.candidates[0].content.parts[0].text.trim();
     content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     var polished = JSON.parse(content);
 
