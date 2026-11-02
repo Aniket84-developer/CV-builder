@@ -26,7 +26,6 @@ function getApiKey() {
   return localStorage.getItem('openai_api_key') || '';
 }
 
-// Convert dataURL to pure base64 (Gemini needs pure base64 without the data: prefix)
 function getPureBase64(dataUrl) {
   return dataUrl.split(',')[1];
 }
@@ -43,7 +42,7 @@ $('saveKeyBtn').addEventListener('click', function() {
     return;
   }
   localStorage.setItem('openai_api_key', key);
-  setStatus($('keyStatus'), 'Gemini API key saved in this browser.', 'success');
+  setStatus($('keyStatus'), 'Gemini API key saved successfully.', 'success');
   $('apiKey').value = '';
 });
 
@@ -77,7 +76,7 @@ function checkAnalyzeReady() {
   $('analyzeBtn').disabled = !(passportBase64 && nagriktaBase64);
 }
 
-// ========== AI Analyze Photos (Gemini) ==========
+// ========== AI Analyze Photos ==========
 $('analyzeBtn').addEventListener('click', async function() {
   var key = getApiKey();
   if (!key) {
@@ -89,17 +88,16 @@ $('analyzeBtn').addEventListener('click', async function() {
     return;
   }
 
-  setStatus($('analyzeStatus'), 'Analyzing photos with Gemini... this may take 10-20 seconds.', 'loading');
+  setStatus($('analyzeStatus'), 'Analyzing photos with Gemini... please wait.', 'loading');
   $('analyzeBtn').disabled = true;
 
   try {
-    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key;
+    // Using the new recommended free model
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=' + key;
 
     var response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{
           parts: [
@@ -122,20 +120,18 @@ $('analyzeBtn').addEventListener('click', async function() {
         }],
         generationConfig: {
           temperature: 0.1,
-          maxOutputTokens: 1000
+          maxOutputTokens: 1024
         }
       })
     });
 
+    var data = await response.json();
+
     if (!response.ok) {
-      var err = await response.json().catch(function() { return {}; });
-      throw new Error(err.error && err.error.message ? err.error.message : 'API error ' + response.status);
+      throw new Error(data.error ? data.error.message : 'API error ' + response.status);
     }
 
-    var data = await response.json();
     var content = data.candidates[0].content.parts[0].text.trim();
-
-    // Clean possible markdown
     content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
     var extracted = JSON.parse(content);
@@ -157,7 +153,7 @@ $('analyzeBtn').addEventListener('click', async function() {
     $('education').value = extracted.education || 'SLC Passed';
 
     $('extractedSection').style.display = 'block';
-    setStatus($('analyzeStatus'), 'Details extracted successfully! You can edit any field below.', 'success');
+    setStatus($('analyzeStatus'), 'Details extracted successfully! You can edit any field.', 'success');
   } catch (err) {
     console.error(err);
     setStatus($('analyzeStatus'), 'Error: ' + err.message, 'error');
@@ -210,7 +206,7 @@ $('addExpBtn').addEventListener('click', function() {
 experiences.push({ company: '', work: '', years: '', country: '' });
 renderExperiences();
 
-// ========== Generate CV (Gemini) ==========
+// ========== Generate CV ==========
 $('generateBtn').addEventListener('click', async function() {
   var key = getApiKey();
   if (!key) {
@@ -220,32 +216,30 @@ $('generateBtn').addEventListener('click', async function() {
 
   var name = $('fullName').value.trim();
   if (!name) {
-    setStatus($('generateStatus'), 'Please fill at least the Full Name (run Analyze Photos first or fill manually).', 'error');
+    setStatus($('generateStatus'), 'Please fill at least the Full Name first.', 'error');
     return;
   }
 
-  setStatus($('generateStatus'), 'Generating polished Bio-Data with Gemini...', 'loading');
+  setStatus($('generateStatus'), 'Generating Bio-Data with Gemini...', 'loading');
   $('generateBtn').disabled = true;
 
   var expText = experiences
     .filter(function(e) { return e.company || e.work; })
     .map(function(e) {
-      return '- Company: ' + e.company + ', Position/Work: ' + e.work + ', Duration: ' + e.years + ', Country: ' + e.country;
+      return '- Company: ' + e.company + ', Position: ' + e.work + ', Duration: ' + e.years + ', Country: ' + e.country;
     })
     .join('\n') || 'No formal experience listed.';
 
   try {
-    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key;
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=' + key;
 
     var response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: 'You are a professional CV writer specializing in Nepali bio-data format. Given personal details and work experience, produce a clean, formal Bio-Data. Return ONLY a valid JSON object with these keys (no extra text, no markdown): {"objective":"polished 1-2 sentence career objective","educationList":["item1","item2"],"experienceList":["Worked as a Warehouse Supervisor at ABC Co. in Kuwait for 3 Years"],"declaration":"I hereby declare that the above furnished information are true and correct to the best of my knowledge and belief."}. Make the experience lines natural and professional.\n\nPersonal details:\nName: ' + name + '\nDOB: ' + $('dob').value + '\nAddress: ' + $('address').value + '\nEducation raw: ' + $('education').value + '\nObjective draft: ' + $('objective').value + '\n\nWork experiences:\n' + expText
+            text: 'You are a professional CV writer for Nepali bio-data format. Return ONLY a valid JSON object with these keys (no markdown): {"objective":"...","educationList":["..."],"experienceList":["Worked as a ... in ... for ..."],"declaration":"I hereby declare that the above furnished information are true and correct to the best of my knowledge and belief."}.\n\nPersonal details:\nName: ' + name + '\nDOB: ' + $('dob').value + '\nAddress: ' + $('address').value + '\nEducation: ' + $('education').value + '\nObjective draft: ' + $('objective').value + '\n\nWork experiences:\n' + expText
           }]
         }],
         generationConfig: {
@@ -255,12 +249,12 @@ $('generateBtn').addEventListener('click', async function() {
       })
     });
 
+    var data = await response.json();
+
     if (!response.ok) {
-      var err = await response.json().catch(function() { return {}; });
-      throw new Error(err.error && err.error.message ? err.error.message : 'API error ' + response.status);
+      throw new Error(data.error ? data.error.message : 'API error ' + response.status);
     }
 
-    var data = await response.json();
     var content = data.candidates[0].content.parts[0].text.trim();
     content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     var polished = JSON.parse(content);
