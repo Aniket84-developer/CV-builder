@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Bio-Data / CV Maker</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <h1>AI Bio-Data / CV Maker</h1>
+      <p>Upload Passport + Nagrikta photos → AI extracts details → Add experience → Generate professional CV</p>
+    </header>
+
+    <!-- API Key Section -->
+    <section class="card api-section">
+      <h2>OpenAI API Key</h2>
+      <p class="hint">Your key stays in this browser only (localStorage). It is never uploaded to any server.</p>
+      <div class="api-row">
+        <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off" />
+        <button id="saveKeyBtn" class="btn secondary">Save Key</button>
+        <button id="clearKeyBtn" class="btn danger">Clear</button>
+      </div>
+      <p id="keyStatus" class="status"></p>
+    </section>
+
+    <!-- Upload Section -->
+    <section class="card">
+      <h2>1. Upload Photos</h2>
+      <div class="upload-grid">
+        <div class="upload-box">
+          <label>Passport Photo</label>
+          <input type="file" id="passportInput" accept="image/*" />
+          <div class="preview" id="passportPreview">
+            <span>No image</span>
+          </div>
+        </div>
+        <div class="upload-box">
+          <label>Nagrikta (Citizenship) Photo</label>
+          <input type="file" id="nagriktaInput" accept="image/*" />
+          <div class="preview" id="nagriktaPreview">
+            <span>No image</span>
+          </div>
+        </div>
+      </div>
+      <button id="analyzeBtn" class="btn primary" disabled>Analyze Photos with AI</button>
+      <p id="analyzeStatus" class="status"></p>
+    </section>
+
+    <!-- Extracted Data (editable) -->
+    <section class="card" id="extractedSection" style="display:none;">
+      <h2>2. Extracted / Editable Personal Details</h2>
+      <div class="form-grid">
+        <div class="field">
+          <label>Full Name</label>
+          <input type="text" id="fullName" />
+        </div>
+        <div class="field">
+          <label>Date of Birth</label>
+          <input type="text" id="dob" placeholder="DD-MMM-YYYY" />
+        </div>
+        <div class="field">
+          <label>Father's / Mother's Name</label>
+          <input type="text" id="parentName" />
+        </div>
+        <div class="field">
+          <label>Address</label>
+          <input type="text" id="address" />
+        </div>
+        <div class="field">
+          <label>Religion</label>
+          <input type="text" id="religion" value="Hindu" />
+        </div>
+        <div class="field">
+          <label>Sex</label>
+          <select id="sex">
+            <option>Male</option>
+            <option>Female</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Marital Status</label>
+          <select id="marital">
+            <option>Married</option>
+            <option>Unmarried</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Languages Known</label>
+          <input type="text" id="languages" value="Hindi, English & Nepali" />
+        </div>
+        <div class="field">
+          <label>Height</label>
+          <input type="text" id="height" placeholder="e.g. 5.7 ft." />
+        </div>
+        <div class="field">
+          <label>Weight</label>
+          <input type="text" id="weight" placeholder="e.g. 70 kg" />
+        </div>
+        <div class="field">
+          <label>Phone</label>
+          <input type="text" id="phone" />
+        </div>
+        <div class="field">
+          <label>Passport Number</label>
+          <input type="text" id="passportNo" />
+        </div>
+        <div class="field">
+          <label>Passport Issue Date</label>
+          <input type="text" id="passportIssue" placeholder="DD-MMM-YYYY" />
+        </div>
+        <div class="field">
+          <label>Passport Expiry Date</label>
+          <input type="text" id="passportExpiry" placeholder="DD-MMM-YYYY" />
+        </div>
+        <div class="field full">
+          <label>Education (one per line)</label>
+          <textarea id="education" rows="3" placeholder="SLC Passed&#10;+2 Passed&#10;Bachelor's in ..."></textarea>
+        </div>
+        <div class="field full">
+          <label>Objective / Career Goal</label>
+          <textarea id="objective" rows="3">Seeking for a suitable position's responsibility where my past experience would be fully utilized in career opportunity and where significant contribution to the success of my employer will gain me career advancement opportunity.</textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- Experience Section -->
+    <section class="card">
+      <h2>3. Working Experience</h2>
+      <p class="hint">Add as many experiences as you want. AI will polish the wording.</p>
+      <div id="experienceList"></div>
+      <button id="addExpBtn" class="btn secondary">+ Add Experience</button>
+    </section>
+
+    <!-- Generate -->
+    <section class="card">
+      <h2>4. Generate CV</h2>
+      <button id="generateBtn" class="btn primary large">Generate Professional Bio-Data / CV</button>
+      <p id="generateStatus" class="status"></p>
+    </section>
+
+    <!-- Preview -->
+    <section class="card" id="previewSection" style="display:none;">
+      <div class="preview-header">
+        <h2>Generated Bio-Data</h2>
+        <div>
+          <button id="downloadPdfBtn" class="btn primary">Download PDF</button>
+          <button id="printBtn" class="btn secondary">Print</button>
+        </div>
+      </div>
+      <div id="cvPreview" class="cv-paper"></div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
