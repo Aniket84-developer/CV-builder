@@ -29,12 +29,12 @@ function getApiKey() {
 // ========== API Key ==========
 $('saveKeyBtn').addEventListener('click', () => {
   const key = $('apiKey').value.trim();
-  if (!key.startsWith('sk-')) {
-    setStatus($('keyStatus'), 'Please enter a valid OpenAI API key (starts with sk-)', 'error');
+  if (!key) {
+    setStatus($('keyStatus'), 'Please enter your DeepSeek API key', 'error');
     return;
   }
   localStorage.setItem('openai_api_key', key);
-  setStatus($('keyStatus'), 'API key saved in this browser.', 'success');
+  setStatus($('keyStatus'), 'DeepSeek API key saved in this browser.', 'success');
   $('apiKey').value = '';
 });
 
@@ -70,10 +70,11 @@ function checkAnalyzeReady() {
 }
 
 // ========== AI Analyze Photos ==========
+// Note: DeepSeek has limited vision support. This may not work as well as GPT-4o.
 $('analyzeBtn').addEventListener('click', async () => {
   const key = getApiKey();
   if (!key) {
-    setStatus($('analyzeStatus'), 'Please save your OpenAI API key first.', 'error');
+    setStatus($('analyzeStatus'), 'Please save your DeepSeek API key first.', 'error');
     return;
   }
   if (!passportBase64 || !nagriktaBase64) {
@@ -81,18 +82,18 @@ $('analyzeBtn').addEventListener('click', async () => {
     return;
   }
 
-  setStatus($('analyzeStatus'), 'Analyzing photos with AI… this may take 10-20 seconds.', 'loading');
+  setStatus($('analyzeStatus'), 'Analyzing photos with DeepSeek… this may take 10-20 seconds.', 'loading');
   $('analyzeBtn').disabled = true;
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${key}`
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'deepseek-chat',
         messages: [
           {
             role: 'system',
@@ -177,7 +178,7 @@ Address should be like "Siraha, Nepal" or full address if available.`
     setStatus($('analyzeStatus'), 'Details extracted successfully! You can edit any field below.', 'success');
   } catch (err) {
     console.error(err);
-    setStatus($('analyzeStatus'), 'Error: ' + err.message, 'error');
+    setStatus($('analyzeStatus'), 'Error: ' + err.message + ' (DeepSeek may have limited image support. You can fill details manually.)', 'error');
   } finally {
     $('analyzeBtn').disabled = false;
   }
@@ -246,17 +247,17 @@ renderExperiences();
 $('generateBtn').addEventListener('click', async () => {
   const key = getApiKey();
   if (!key) {
-    setStatus($('generateStatus'), 'Please save your OpenAI API key first.', 'error');
+    setStatus($('generateStatus'), 'Please save your DeepSeek API key first.', 'error');
     return;
   }
 
   const name = $('fullName').value.trim();
   if (!name) {
-    setStatus($('generateStatus'), 'Please fill at least the Full Name (run Analyze Photos first).', 'error');
+    setStatus($('generateStatus'), 'Please fill at least the Full Name (run Analyze Photos first or fill manually).', 'error');
     return;
   }
 
-  setStatus($('generateStatus'), 'Generating polished Bio-Data with AI…', 'loading');
+  setStatus($('generateStatus'), 'Generating polished Bio-Data with DeepSeek…', 'loading');
   $('generateBtn').disabled = true;
 
   // Build experience text for AI
@@ -266,14 +267,14 @@ $('generateBtn').addEventListener('click', async () => {
     .join('\n') || 'No formal experience listed.';
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${key}`
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'deepseek-chat',
         messages: [
           {
             role: 'system',
